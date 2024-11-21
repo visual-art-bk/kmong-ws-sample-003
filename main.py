@@ -13,128 +13,24 @@ from tqdm.asyncio import tqdm
 import nodriver as uc
 import absl.logging
 from openpyxl.drawing.image import Image as OpenpyxlImage
-from modules.services.ai import ai_parse 
+from modules.services.ai import ai_parse
 from modules.utils.validators import is_valid_image
 from modules.utils.extractors import extract_it_id
 from modules.utils.file_utils import read_urls
-    
+from modules.utils.parsers import parse_images
+from modules.scrappers.fetch_page_source import fetch_page_source
+from modules.scrappers import download_images
+
+print("Start v.1.0.0")
+
 absl.logging.set_verbosity("error")
 
 timestamp = datetime.now().strftime("%Y-%m-%d_%Hh%Mm%Ss")
 
-urls = read_urls(path='url.txt')
+urls = read_urls(path="url.txt")
 
 results = {}
 lock = asyncio.Lock()
-
-async def fetch_page_source(url, folder_path):
-    browser = await uc.start()
-
-    try:
-        page = await asyncio.wait_for(
-            browser.get(url), timeout=10
-        )  # 10초의 타임아웃 설정
-
-        count = 0
-        while True:
-            if count > 5:
-                async with lock:
-                    results[url]["결과"] = "실패"
-                return ""
-
-            await asyncio.sleep(3)
-            count += 1
-
-            try:
-                source = await asyncio.wait_for(page.get_content(), timeout=5)
-            except asyncio.TimeoutError:
-                async with lock:
-                    results[url]["결과"] = "실패"
-                return ""
-
-            if "<img" in source:
-                return source
-    except asyncio.TimeoutError:
-        async with lock:
-            results[url]["결과"] = "실패"
-        return ""
-    except Exception:
-        async with lock:
-            results[url]["결과"] = "실패"
-        return ""
-    finally:
-        browser.stop()
-
-
-def parse_images(html_data, url):
-    soup = BeautifulSoup(html_data, "html.parser")
-
-    for tag in soup.find_all(["header", "head", "footer"]):
-        tag.decompose()
-    for tag in soup.find_all(
-        class_=lambda class_name: class_name and "recommend" in class_name
-    ):
-        tag.decompose()
-    for tag in soup.find_all(
-        class_=lambda class_name: class_name and "relate" in class_name
-    ):
-        tag.decompose()
-    for tag in soup.find_all(
-        class_=lambda class_name: class_name and "logo" in class_name
-    ):
-        tag.decompose()
-    for tag in soup.find_all(
-        class_=lambda class_name: class_name and "together" in class_name
-    ):
-        tag.decompose()
-    for tag in soup.find_all(
-        class_=lambda class_name: class_name and "list" in class_name
-    ):
-        tag.decompose()
-    for tag in soup.find_all(
-        class_=lambda class_name: class_name and "review" in class_name
-    ):
-        tag.decompose()
-    for tag in soup.find_all(
-        class_=lambda class_name: class_name and "banner" in class_name
-    ):
-        tag.decompose()
-    for tag in soup.find_all(
-        class_=lambda class_name: class_name and "category" in class_name
-    ):
-        tag.decompose()
-    for tag in soup.find_all(
-        class_=lambda class_name: class_name and "option" in class_name
-    ):
-        tag.decompose()
-    for tag in soup.find_all(
-        class_=lambda class_name: class_name and "guide" in class_name
-    ):
-        tag.decompose()
-
-    img_tags = soup.find_all("img")
-    img_urls = [
-        (
-            urljoin(url, img["src"])
-            if ";base64," not in img["src"]
-            else (
-                urljoin(url, img["ec-data-src"]) if "ec-data-src" in img.attrs else ""
-            )
-        )
-        for img in img_tags
-        if "src" in img.attrs
-        and not img["src"].lower().endswith(".svg")
-        and not "//img.echosting.cafe24.com/" in img["src"]
-        and "/theme/" not in img["src"]
-        and "facebook" not in img["src"]
-        and "icon" not in img["src"]
-        and "logo" not in img["src"]
-        and "common" not in img["src"]
-        and "banner" not in img["src"]
-        and "brand" not in img["src"]
-    ]
-
-    return img_urls
 
 
 with open("config.json", "r", encoding="utf-8") as file:
@@ -157,103 +53,7 @@ model.generate_content("Hi")
 os.system("cls")
 
 
-
-async def download_images(url, folder_name):
-    item_id = extract_it_id(url)
-
-    folder_path = os.path.join(f"이미지/{item_id}", folder_name)
-
-    os.makedirs(folder_path, exist_ok=True)
-
-    html_data = await fetch_page_source(url, folder_path)
-    img_urls = parse_images(html_data, url)
-
-    thumb_path = ""
-    if len(img_urls) > 0:
-        idx = 0
-        for img_url in tqdm(img_urls, desc="이미지 다운로드 중...", leave=False):
-            if img_url == "":
-                continue
-
-            headers = {
-                "Upgrade-Insecure-Requests": "1",
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-                "sec-ch-ua": '"Not/A)Brand";v="8", "Chromium";v="126", "Google Chrome";v="126"',
-                "sec-ch-ua-mobile": "?0",
-                "sec-ch-ua-platform": '"Windows"',
-            }
-            try:
-                img_response = requests.get(
-                    img_url, headers=headers, stream=True, timeout=120
-                )
-                img_response.raise_for_status()
-            except Exception:
-                continue
-
-            if not is_valid_image(img_response.content):
-                continue
-
-            parsed_url = urlparse(img_url)
-            file_name, file_extension = os.path.splitext(
-                os.path.basename(parsed_url.path)
-            )
-
-            if not file_extension:
-                file_extension = ".jpg"
-
-            img_path = os.path.join(folder_path, f"{item_id}_{idx}{file_extension}")
-
-            with open(img_path, "wb") as file:
-                for chunk in img_response.iter_content(1024):
-                    file.write(chunk)
-
-            if idx == 0:
-                thumb_path = img_path
-
-            idx += 1
-
-        async with lock:
-            results[url]["결과"] = "성공"
-            results[url]["이미지"] = thumb_path
-
-        try:
-            parsed_data = ai_parse(
-                ai_model=model,
-                html_data=html_data)
-
-            async with lock:
-                results[url]["매장가"] = parsed_data["market_price"]
-                results[url]["단가"] = parsed_data["price"]
-                results[url]["성별"] = parsed_data["gender"]
-                results[url]["상품명"] = (
-                    re.match(r"^\[.*?\] (.*)", str(parsed_data["kor_name"])).group(1)
-                    if re.match(r"^\[.*?\] (.*)", str(parsed_data["kor_name"]))
-                    else str(parsed_data["kor_name"])
-                )
-                results[url]["영문명"] = (
-                    re.match(r"^\[.*?\] (.*)", str(parsed_data["eng_name"])).group(1)
-                    if re.match(r"^\[.*?\] (.*)", str(parsed_data["eng_name"]))
-                    else str(parsed_data["eng_name"])
-                )
-                results[url]["브랜드"] = parsed_data["brand"].upper()
-                results[url]["2차"] = parsed_data["first_category"]
-                results[url]["3차"] = parsed_data["second_category"]
-                results[url]["추가 정보\n모델명"] = str(parsed_data["genuine_number"])
-                results[url]["필수옵션\n색상"] = ",".join(parsed_data["colors"])
-                results[url]["필수옵션\n사이즈"] = (
-                    ",".join(parsed_data["sizes"]).replace("(", "[").replace(")", "]")
-                )
-        except Exception:
-            async with lock:
-                results[url]["결과"] = "실패"
-    else:
-        async with lock:
-            results[url]["결과"] = "실패"
-
-
 async def main():
-    # browser = await uc.start(headless=True)
-
     for url in tqdm(urls, desc="링크 순회 중..."):
         folder_name = datetime.now().strftime(timestamp)
 
@@ -295,7 +95,13 @@ async def main():
                 "필수옵션\n밴드": "",
             }
 
-        await download_images(urllib.parse.unquote(url), str(folder_name))
+        await download_images(
+            url=urllib.parse.unquote(url),
+            folder_name=str(folder_name),
+            lock=lock,
+            model=model,
+            results=results,
+        )
 
 
 uc.loop().run_until_complete(main())

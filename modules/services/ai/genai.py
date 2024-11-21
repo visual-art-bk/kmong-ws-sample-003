@@ -1,18 +1,5 @@
-import os, requests, asyncio, urllib.parse, json, re
-from bs4 import BeautifulSoup
-from urllib.parse import urljoin, urlparse, parse_qs
-import google.generativeai as genai
-from datetime import datetime
-import pandas as pd
-import openpyxl
-from openpyxl.utils.dataframe import dataframe_to_rows
-from openpyxl.styles import Alignment, Font
-from PIL import Image
-from io import BytesIO
-from tqdm.asyncio import tqdm
-import nodriver as uc
-import absl.logging
-from openpyxl.drawing.image import Image as OpenpyxlImage
+import json
+
 
 def ai_parse(ai_model, html_data):
     prompt = f"""```html_data
@@ -173,4 +160,3 @@ genuine_number : string (상품의 정품 코드. 정품 번호는 제품 이름
 
     response = ai_model.generate_content(prompt).text.strip()
     return json.loads(response)
-

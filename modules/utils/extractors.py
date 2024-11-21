@@ -1,4 +1,4 @@
-from urllib.parse import urljoin, urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs
 
 def extract_it_id(url):
     try:
