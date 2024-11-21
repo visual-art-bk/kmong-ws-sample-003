@@ -16,15 +16,13 @@ from openpyxl.drawing.image import Image as OpenpyxlImage
 from modules.services.ai import ai_parse 
 from modules.utils.validators import is_valid_image
 from modules.utils.extractors import extract_it_id
-
+from modules.utils.file_utils import read_urls
     
 absl.logging.set_verbosity("error")
 
 timestamp = datetime.now().strftime("%Y-%m-%d_%Hh%Mm%Ss")
 
-with open("url.txt", "r") as file:
-    urls = file.read().splitlines()
-
+urls = read_urls(path='url.txt')
 
 results = {}
 lock = asyncio.Lock()
