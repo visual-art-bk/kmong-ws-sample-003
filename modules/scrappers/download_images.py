@@ -27,7 +27,7 @@ async def download_images(url, folder_name, lock, results, model):
     thumb_path = ""
     if len(img_urls) > 0:
         idx = 0
-        for img_url in tqdm(img_urls, desc="이미지 다운로드 중...", leave=False):
+        for img_url in tqdm(img_urls, desc="이미지 다운로드 중...",  ascii=True, leave=False):
             if img_url == "":
                 continue
 
