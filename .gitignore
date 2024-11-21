@@ -3,3 +3,17 @@ __main_comments
 config.json
 
 winenv
+
+dist
+
+build
+
+.vscode
+
+이미지
+
+*.xlsx
+
+*/**/__pycache__
+
+*.spec
