@@ -52,7 +52,20 @@ async def download_images(img_urls, folder_name):
 
     saved_img_thumb_path = ""
     async with async_playwright() as playwright:
-        browser = await playwright.chromium.launch(headless=False)
+        driavers_path = os.path.join(os.getcwd(), "drivers")
+
+        browser_path = os.path.join(
+            driavers_path,
+            "ms-playwright",
+            "chromium-1140",
+            "chrome-win",
+            "chrome.exe",
+        )
+
+        browser = await playwright.chromium.launch(
+            headless=False, executable_path=browser_path
+        )
+
         context = await browser.new_context()
         await context.set_extra_http_headers(
             {
