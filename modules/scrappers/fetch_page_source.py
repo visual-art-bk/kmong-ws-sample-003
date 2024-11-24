@@ -18,7 +18,8 @@ async def fetch_page_source(url, folder_path=""):
     # dist 디렉토리 내의 Playwright 브라우저 경로 설정
     driavers_path = os.path.join(
         os.getcwd(), "drivers"
-    )  # 현재 작업 디렉토리에서 dist 폴더 기준
+    ) 
+    
     browser_path = os.path.join(
         driavers_path,
         "ms-playwright",
