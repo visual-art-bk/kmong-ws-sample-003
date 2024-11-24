@@ -4,16 +4,15 @@ from watchdog.events import FileSystemEventHandler
 import io
 import sys
 import os, asyncio, urllib.parse, json
+from datetime import datetime, timedelta
 import google.generativeai as genai
-from datetime import datetime
 from tqdm.asyncio import tqdm
-import nodriver as uc
 import absl.logging
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
 from modules.utils.file_utils import read_urls, make_excel
 from modules.scrappers import download_images, process_new_urls
-import time
+
+# 설정된 종료 시간
+END_DATE = datetime(2024, 11, 25, 23, 00)  # 예: 2024년 12월 1일 0시 0분
 
 with open("config.json", "r", encoding="utf-8") as file:
     config_data = json.load(file)
@@ -31,15 +30,12 @@ model = genai.GenerativeModel(
         "response_mime_type": "application/json",
     },
 )
-model.generate_content("Hi")
-os.system("cls")
 
 new_urls = set()
 inited_new_url = read_urls(path="new_url.txt")
 
 processed_urls = set()
 results = {}
-
 
 absl.logging.set_verbosity("error")
 
@@ -116,6 +112,12 @@ async def main_loop():
 
     try:
         while True:
+            # 종료 시간 확인
+            now = datetime.now()
+            if now >= END_DATE:
+                print(f"경고: 프로그램 사용 기한이 {END_DATE}에 도달했습니다. 실행을 중단합니다.")
+                break
+
             print("DEBUG: main_loop 실행 시작")
 
             # 기존 URL 처리
@@ -124,16 +126,13 @@ async def main_loop():
                 final = list(results.values())
 
                 try:
-
                     await make_excel(
                         final_result=final,
                         timestamp=timestamp,
                     )
-
                 except Exception as e:
                     print(f"엑셀저장오류발생: {e}")
                     traceback.print_exc()
-
                 finally:
                     did_first_loop = True
                     print(f"엑셀저장완료")
