@@ -1,3 +1,4 @@
+import traceback
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import io
@@ -34,84 +35,136 @@ model.generate_content("Hi")
 os.system("cls")
 
 new_urls = set()
-if __name__ == "__main__":
-    print("Start v.1.0.4")
+inited_new_url = read_urls(path="new_url.txt")
 
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8")
+processed_urls = set()
+results = {}
 
-    absl.logging.set_verbosity("error")
 
-    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+absl.logging.set_verbosity("error")
 
-    urls = read_urls(path="url.txt")
+timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
 
-    results = {}
-    lock = asyncio.Lock()
+urls = read_urls(path="url.txt")
 
-    # 파일 변경 감지 핸들러
-    class FileHandler(FileSystemEventHandler):
-        def __init__(self, observed_file, callback):
-            self.observed_file = observed_file
-            self.callback = callback
+lock = asyncio.Lock()
 
-        def on_modified(self, event):
-            if event.src_path.endswith(self.observed_file):
-                self.callback()
+file_change_queue = asyncio.Queue()  # 파일 변경 이벤트를 저장하는 큐
 
-    # 파일 변경 감지로 새 URL 읽기
-    def monitor_file():
-        new_urls = read_urls("new_url.txt") - read_urls("url.txt")
-        if new_urls:
-            print(f"새로운 URL 발견: {new_urls}")
-            asyncio.run(
-                process_new_urls(
-                    urls=new_urls,
-                    lock=lock,
-                    model=model,
-                    results=results,
-                    timestamp=timestamp,
-                )
-            )
-            # 기존 URL 리스트 업데이트
-            with open("url.txt", "a", encoding="utf-8") as f:
-                for url in new_urls:
-                    f.write(url + "\n")
 
-    uc.loop().run_until_complete(
-        process_new_urls(
-            urls=urls, lock=lock, model=model, results=results, timestamp=timestamp
-        )
-    )
+async def scrap_urls(urls, results: dict):
+    local_results = {}  # 함수 내에서만 사용할 로컬 변수
 
-    final = list(results.values())
-
-    make_excel(
-        final_result=final,
+    await process_new_urls(
+        urls=urls,
+        lock=lock,
+        model=model,
+        results=local_results,  # 로컬 변수에 저장
         timestamp=timestamp,
     )
 
+    # 전역 results에 새로운 데이터를 추가
+    results.update(local_results)
+
+
+class FileHandler(FileSystemEventHandler):
+    def __init__(self, observed_file, loop):
+        self.observed_file = observed_file
+        self.loop = loop
+
+    def on_modified(self, event):
+        if event.src_path.endswith(self.observed_file):
+            print(f"DEBUG: {self.observed_file} 변경 감지됨")
+            # 비동기로 큐에 이벤트 추가
+            self.loop.call_soon_threadsafe(
+                asyncio.create_task, file_change_queue.put(event)
+            )
+
+
+async def monitor_file():
+    global results  # 전역 변수로 사용
+
+    new_urls = read_urls("new_url.txt") - read_urls("url.txt")
+
+    # 이미 처리된 URL 필터링
+    new_urls -= processed_urls
+
+    if new_urls:
+        print(f"\n 파일변경모니터링중... 새로운 URL 발견: {new_urls}")
+
+        await scrap_urls(urls=new_urls, results=results)
+
+        # 처리된 URL 추가
+        processed_urls.update(new_urls)
+
+        with open("url.txt", "a", encoding="utf-8") as f:
+            for url in new_urls:
+                f.write(url + "\n")
+    else:
+        print(f"\n 파일변경모니터링중.. 새로운 URL 없음: {new_urls}")
+
+
+async def main_loop():
+    global results
+    did_first_loop = False
+
     # 파일 변경 감지 설정
     observer = Observer()
-    event_handler = FileHandler("new_url.txt", monitor_file)
+    event_handler = FileHandler("new_url.txt", asyncio.get_event_loop())
     observer.schedule(event_handler, path=".", recursive=False)
     observer.start()
 
-    print("새 URL 감지 중... 종료하려면 Ctrl+C를 누르세요.")
-
     try:
         while True:
-            time.sleep(1)
-            user_input = input("신규 url 추가 대기중. (종료하려면 'exit' 입력): ")
-            if user_input.lower() == "exit":
-                print("프로그램을 종료합니다.")
-                break
+            print("DEBUG: main_loop 실행 시작")
+
+            # 기존 URL 처리
+            if did_first_loop == False:
+                await scrap_urls(urls=urls, results=results)
+                final = list(results.values())
+
+                try:
+
+                    await make_excel(
+                        final_result=final,
+                        timestamp=timestamp,
+                    )
+
+                except Exception as e:
+                    print(f"엑셀저장오류발생: {e}")
+                    traceback.print_exc()
+
+                finally:
+                    did_first_loop = True
+                    print(f"엑셀저장완료")
+
+            # 파일 변경 이벤트 처리
+            print("DEBUG: 파일 변경 대기 중...")
+            event = await file_change_queue.get()  # 큐에서 이벤트 가져오기
+            print(f"DEBUG: 변경 이벤트 처리: {event.src_path}")
+
+            # 파일 변경 감지 후 monitor_file 호출
+            await monitor_file()
+
+            # 큐가 비었는지 확인 후 엑셀 저장
+            if file_change_queue.empty():  # 큐가 비었을 때만 실행
+                print("DEBUG: 큐가 비었음. 엑셀 저장 실행.")
+                final = list(results.values())
+
+                await make_excel(
+                    final_result=final,
+                    timestamp=timestamp,
+                )
+            else:
+                print("DEBUG: 큐가 비지 않음. 엑셀 저장 대기.")
+
     except KeyboardInterrupt:
         observer.stop()
-    observer.join()
+    finally:
+        observer.join()
 
-    # while True:
-    #     user_input = input("명령을 입력하세요 (종료하려면 'exit' 입력): ")
-    #     if user_input.lower() == "exit":
-    #         print("프로그램을 종료합니다.")
-    #         break
+
+if __name__ == "__main__":
+    print("Start v.1.0.4")
+
+    asyncio.run(main_loop())

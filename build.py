@@ -2,6 +2,7 @@ import os
 import subprocess
 
 def build_exe():
+    """파이썬 스크립트를 exe로 빌드"""
     script_name = "main.py"  # 빌드할 스크립트 이름
     exe_name = "main.exe"  # 생성될 exe 파일 이름
     dist_dir = "dist"  # 실행 파일이 저장될 디렉토리 이름
@@ -12,12 +13,13 @@ def build_exe():
     # PyInstaller 명령어 생성
     command = [
         "pyinstaller",
-        "--onefile",        # 단일 exe 파일로 생성
-        "--noconfirm",      # 기존 빌드 폴더를 덮어씀
-        "--console",        # 콘솔 창을 표시 (숨기려면 "--noconsole"로 변경)
-        "--name", exe_name, # 생성될 exe 파일 이름
+        "--onefile",  # 단일 exe 파일로 생성
+        "--noconfirm",  # 기존 빌드 폴더를 덮어씀
+        "--console",  # 콘솔 창을 표시 (숨기려면 "--noconsole"로 변경)
+        "--name",
+        exe_name,  # 생성될 exe 파일 이름
         f"--distpath={dist_dir}",  # dist 디렉토리 경로 지정
-        script_name         # 빌드할 스크립트
+        script_name,  # 빌드할 스크립트
     ]
 
     print(f"명령 실행 중: {' '.join(command)}")
@@ -33,5 +35,7 @@ def build_exe():
         print("\n[에러] PyInstaller가 설치되지 않았습니다. 먼저 설치하세요:")
         print("pip install pyinstaller")
 
+
 if __name__ == "__main__":
+    # exe 빌드
     build_exe()

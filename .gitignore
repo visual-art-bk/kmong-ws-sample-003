@@ -17,3 +17,11 @@ build
 */**/__pycache__
 
 *.spec
+
+url.txt
+
+new_url.txt
+
+temp_url.txt
+
+drivers

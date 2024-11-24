@@ -11,6 +11,6 @@ def extract_it_id(url):
         # it_id 추출
         it_id = query_params.get("it_id", [None])[0]
 
-        return f"item_id_{it_id}"
+        return f"{it_id}"
     except Exception as e:
         return f"Error: {e}"

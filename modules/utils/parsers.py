@@ -1,7 +1,7 @@
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 
-def parse_images(html_data, url):
+async def parse_images(html_data, url):
     soup = BeautifulSoup(html_data, "html.parser")
 
     for tag in soup.find_all(["header", "head", "footer"]):

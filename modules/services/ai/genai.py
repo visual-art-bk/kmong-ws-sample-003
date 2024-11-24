@@ -1,7 +1,7 @@
 import json
 
 
-def ai_parse(ai_model, html_data):
+async def ai_parse(ai_model, html_data):
     prompt = f"""```html_data
 {html_data}
 ```

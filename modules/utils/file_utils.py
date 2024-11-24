@@ -15,7 +15,7 @@ def read_urls(path="url.txt"):
 
 
 
-def make_excel(final_result, timestamp):
+async def make_excel(final_result, timestamp):
         
     avail_brands = [
         "ASK YOURSELF",
