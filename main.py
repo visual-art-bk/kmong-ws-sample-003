@@ -99,7 +99,7 @@ async def monitor_file():
 
         with open("url.txt", "a", encoding="utf-8") as f:
             for url in new_urls:
-                f.write(url + "\n")
+                f.write( "\n" + url + "\n")
     else:
         print(f"\n 파일변경모니터링중.. 새로운 URL 없음: {new_urls}")
 
