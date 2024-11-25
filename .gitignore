@@ -1,3 +1,11 @@
+*.xlsx
+
+*/**/__pycache__
+
+*.spec
+
+*.txt
+
 __main_comments
 
 config.json
@@ -11,12 +19,6 @@ build
 .vscode
 
 이미지
-
-*.xlsx
-
-*/**/__pycache__
-
-*.spec
 
 url.txt
 
