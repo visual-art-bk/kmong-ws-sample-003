@@ -7,7 +7,7 @@ def fail_result(result: dict, url, result_url_k="결과", result_url_v="실패")
     result[url][result_url_k] = result_url_v
 
 
-def save_scraping_result(url, thumb_path, parsed_data=None, folder_name="정의되지않음"):
+async def save_scraping_result(url, thumb_path, parsed_data=None, folder_name="정의되지않음"):
     """local_result에 결과 저장"""
     result = {}
 

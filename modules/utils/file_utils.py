@@ -247,6 +247,8 @@ async def make_excel(final_result, timestamp):
             ws.add_image(img, f"E{idx + 2}")
             ws.row_dimensions[idx + 2].height = 65
             row[4] = ""
+        else:
+            row[4] = "사진없음"
 
         ws.append(row)
 
@@ -254,14 +256,14 @@ async def make_excel(final_result, timestamp):
             cell.alignment = alignment
             cell.font = font
 
-    ws.column_dimensions["B"].width = 18
+    ws.column_dimensions["B"].width = 40
     ws.column_dimensions["E"].width = 12
     ws.column_dimensions["F"].width = 8.25
     ws.column_dimensions["G"].width = 11.25
     ws.column_dimensions["H"].width = 12.75
     ws.column_dimensions["K"].width = 12.75
     ws.column_dimensions["L"].width = 15
-    ws.column_dimensions["N"].width = 39
+    ws.column_dimensions["N"].width = 15
     ws.column_dimensions["O"].width = 22.5
     ws.column_dimensions["P"].width = 12
     ws.column_dimensions["Q"].width = 12

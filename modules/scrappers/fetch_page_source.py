@@ -1,7 +1,8 @@
 import asyncio
 from playwright.async_api import async_playwright
 import os
-
+from modules.utils.wrap_browser_page import WsBrowser
+from modules.utils.Logger import Logger
 
 # async def save_result(lock, results, url, status_k, status_v):
 #     async with lock:
@@ -9,81 +10,43 @@ import os
 
 
 async def fetch_page_source(url, folder_path=""):
+    logger = Logger(
+        log_file="logs/ws/fetch-page/exc.log", name="fetch_page_source"
+    ).get_logger()
+
     status_key_result = "결과"
-    timeout_page_goto = 40
+    timeout_page_goto = 10000
     sleep_before_page_loading = 2
-    timeout_page_content_loading = 40
+    timeout_page_content_loading = 10000
     is_page_loaded = False
 
-    # dist 디렉토리 내의 Playwright 브라우저 경로 설정
-    driavers_path = os.path.join(
-        os.getcwd(), "drivers"
-    ) 
-    
-    browser_path = os.path.join(
-        driavers_path,
-        "ms-playwright",
-        "chromium-1140",
-        "chrome-win",
-        "chrome.exe",
-    )
-
-    if not os.path.exists(browser_path):
-        print(f"[ERROR] 브라우저 실행 파일을 찾을 수 없습니다: {browser_path}")
-        return None
-
     async with async_playwright() as playwright:
-        # Playwright 브라우저 경로 지정
-        browser = await playwright.chromium.launch(
-            headless=False, executable_path=browser_path
-        )
+        async with WsBrowser(playwright=playwright) as ws_browser:
+            source = ""
 
-        context = await browser.new_context()
-        page = await context.new_page()
-        source = ""
+            for attempt in range(5):
 
-        for attempt in range(5):
-            try:
-                await asyncio.wait_for(page.goto(url), timeout=timeout_page_goto)
+                is_goto_ok = await ws_browser.goto(url=url, timeout=timeout_page_goto)
+
+                if is_goto_ok == False:
+                    logger.exception(
+                        f"fetch page 실패 / 타겟: {url}\n"
+                        f"{attempt + 1}번 접속 재시도\n"
+                    )
+
+                    continue
+
                 await asyncio.sleep(sleep_before_page_loading)
+
                 source = await asyncio.wait_for(
-                    page.content(), timeout=timeout_page_content_loading
+                    ws_browser.page.content(), timeout=timeout_page_content_loading
                 )
 
                 if not "<img" in source:
                     source = ""
-                    # await save_result(
-                    #     lock,
-                    #     results,
-                    #     url,
-                    #     status_k=status_key_result,
-                    #     status_v="페이지로딩성공-사진없음",
-                    # )
 
                 is_page_loaded = True
+
                 break
-
-            except asyncio.TimeoutError:
-                pass
-                # await save_result(
-                #     lock,
-                #     results,
-                #     url,
-                #     status_k=status_key_result,
-                #     status_v="페이지로딩실패-시간초과",
-                # )
-
-            except Exception:
-                pass
-                # await save_result(
-                #     lock,
-                #     results,
-                #     url,
-                #     status_k=status_key_result,
-                #     status_v="패이지로딩실패-알수없는오류",
-                # )
-
-            finally:
-                await browser.close()
 
     return source

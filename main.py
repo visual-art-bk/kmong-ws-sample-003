@@ -10,9 +10,12 @@ from tqdm.asyncio import tqdm
 import absl.logging
 from modules.utils.file_utils import read_urls, make_excel
 from modules.scrappers import download_images, process_new_urls
+from modules.utils.Logger import Logger
 
 # 설정된 종료 시간
-END_DATE = datetime(2024, 11, 25, 23, 00)  # 예: 2024년 12월 1일 0시 0분
+END_DATE = datetime(2024, 11, 30, 23, 00)  # 예: 2024년 12월 1일 0시 0분
+
+logger = Logger(name="main", log_file="logs/main.log").get_logger()
 
 with open("config.json", "r", encoding="utf-8") as file:
     config_data = json.load(file)
@@ -49,18 +52,12 @@ file_change_queue = asyncio.Queue()  # 파일 변경 이벤트를 저장하는 �
 
 
 async def scrap_urls(urls, results: dict):
-    local_results = {}  # 함수 내에서만 사용할 로컬 변수
-
-    await process_new_urls(
-        urls=urls,
-        lock=lock,
-        model=model,
-        results=local_results,  # 로컬 변수에 저장
-        timestamp=timestamp,
+    scraped_results = await process_new_urls(
+        model=model, timestamp=timestamp, urls=urls
     )
 
     # 전역 results에 새로운 데이터를 추가
-    results.update(local_results)
+    results.update(scraped_results)
 
 
 class FileHandler(FileSystemEventHandler):
@@ -95,12 +92,14 @@ async def monitor_file():
 
         with open("url.txt", "a", encoding="utf-8") as f:
             for url in new_urls:
-                f.write( "\n" + url + "\n")
+                f.write("\n" + url + "\n")
     else:
         print(f"\n 파일변경모니터링중.. 새로운 URL 없음: {new_urls}")
 
 
 async def main_loop():
+    logger.info("로그 테스트 / main_loop")
+
     global results
     did_first_loop = False
 
@@ -115,14 +114,18 @@ async def main_loop():
             # 종료 시간 확인
             now = datetime.now()
             if now >= END_DATE:
-                print(f"경고: 프로그램 사용 기한이 {END_DATE}에 도달했습니다. 실행을 중단합니다.")
+                print(
+                    f"경고: 프로그램 사용 기한이 {END_DATE}에 도달했습니다. 실행을 중단합니다."
+                )
                 break
 
             print("DEBUG: main_loop 실행 시작")
 
             # 기존 URL 처리
             if did_first_loop == False:
+
                 await scrap_urls(urls=urls, results=results)
+
                 final = list(results.values())
 
                 try:
@@ -164,6 +167,6 @@ async def main_loop():
 
 
 if __name__ == "__main__":
-    print("Start v.1.0.4")
+    logger.info("Start v.1.0.5")
 
     asyncio.run(main_loop())
