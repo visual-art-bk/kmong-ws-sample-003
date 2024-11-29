@@ -23,17 +23,24 @@ async def fetch_page_source(url, folder_path=""):
     async with async_playwright() as playwright:
         async with WsBrowser(playwright=playwright) as ws_browser:
             source = ""
+            attempt_max = 4
 
-            for attempt in range(5):
+            for attempt in range(attempt_max):
+                if attempt == 0:
+                    logger.info(f"fetch page 접속시도 / 타겟: {url}\n")
+                else:
+                    logger.exception(
+                        f"fetch page 실패 / 타겟: {url}\n" f"{attempt}번 접속 재시도\n"
+                    )
 
                 is_goto_ok = await ws_browser.goto(url=url, timeout=timeout_page_goto)
 
                 if is_goto_ok == False:
-                    logger.exception(
-                        f"fetch page 실패 / 타겟: {url}\n"
-                        f"{attempt + 1}번 접속 재시도\n"
-                    )
-
+                    if attempt == attempt_max:
+                        logger.exception(
+                            f"{attempt}번 접속 재시도 초과\n",
+                            f"fetch page 현재접속불가 / 타겟: {url}",
+                        )
                     continue
 
                 await asyncio.sleep(sleep_before_page_loading)
