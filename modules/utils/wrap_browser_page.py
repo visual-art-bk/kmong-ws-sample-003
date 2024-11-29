@@ -61,7 +61,6 @@ class WsBrowser:
     async def goto(self, url: str, timeout: int = 10000):
         import asyncio
         from playwright._impl._errors import Error, TimeoutError
-      
 
         try:
             await self.page.goto(url, timeout=timeout)
@@ -83,7 +82,7 @@ class WsBrowser:
                 self._log(f"Playwright 관련 오류: {str(e)}")
         except Exception as e:
             self._log(f"알 수 없는 오류 발생: {e}")
-            
+
         return False
 
     @staticmethod
@@ -91,9 +90,13 @@ class WsBrowser:
         try:
             headless_mode = False
             executable_path = WsBrowser._get_browser_path()
+            proxy = {
+                "server": "http://43.134.68.153:3128",  # 프록시 서버 주소와 포트
+            }
 
             return {
                 "headless": headless_mode,
+                "proxy": proxy,
                 "executable_path": executable_path,
                 "args": [
                     "--disable-blink-features=AutomationControlled",  # 자동화 탐지 방지
