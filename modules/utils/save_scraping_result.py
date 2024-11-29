@@ -7,7 +7,9 @@ def fail_result(result: dict, url, result_url_k="결과", result_url_v="실패")
     result[url][result_url_k] = result_url_v
 
 
-async def save_scraping_result(url, thumb_path, parsed_data=None, folder_name="정의되지않음"):
+async def save_scraping_result(
+    url, thumb_path, parsed_data: dict, folder_name="정의되지않음"
+):
     """local_result에 결과 저장"""
     result = {}
 
@@ -29,33 +31,41 @@ async def save_scraping_result(url, thumb_path, parsed_data=None, folder_name="�
 
         result[url]["이미지"] = thumb_path
 
-        result[url]["단가"] = parsed_data["price"]
+        result[url]["단가"] = parsed_data.get("price") or "AI분석결과없음"
 
         result[url]["1차"] = ""
 
-        result[url]["2차"] = parsed_data["first_category"]
+        result[url]["2차"] = parsed_data.get("first_category") or "AI분석결과없음"
 
-        result[url]["3차"] = parsed_data["second_category"]
+        result[url]["3차"] = parsed_data.get("second_category") or "AI분석결과없음"
 
         result[url]["4차"] = ""
 
         result[url]["필터"] = ""
 
-        result[url]["성별"] = parsed_data["gender"]
+        result[url]["성별"] = parsed_data.get("gender") or "AI분석결과없음"
 
-        result[url]["브랜드"] = parsed_data["brand"].upper()
+        result[url]["브랜드"] = (parsed_data.get("brand") or "AI분석결과없음").upper()
 
         result[url]["2차 브랜드"] = ""
 
         result[url]["상품명"] = (
-            re.match(r"^\[.*?\] (.*)", str(parsed_data["kor_name"])).group(1)
-            if re.match(r"^\[.*?\] (.*)", str(parsed_data["kor_name"]))
+            re.match(
+                r"^\[.*?\] (.*)", str((parsed_data.get("kor_name") or "AI분석결과없음"))
+            ).group(1)
+            if re.match(
+                r"^\[.*?\] (.*)", str((parsed_data.get("kor_name") or "AI분석결과없음"))
+            )
             else str(parsed_data["kor_name"])
         )
 
         result[url]["영문명"] = (
-            re.match(r"^\[.*?\] (.*)", str(parsed_data["eng_name"])).group(1)
-            if re.match(r"^\[.*?\] (.*)", str(parsed_data["eng_name"]))
+            re.match(
+                r"^\[.*?\] (.*)", str((parsed_data.get("eng_name") or "AI분석결과없음"))
+            ).group(1)
+            if re.match(
+                r"^\[.*?\] (.*)", str((parsed_data.get("eng_name") or "AI분석결과없음"))
+            )
             else str(parsed_data["eng_name"])
         )
 
@@ -67,7 +77,7 @@ async def save_scraping_result(url, thumb_path, parsed_data=None, folder_name="�
 
         result[url]["추가 정보\n구성품"] = "풀박스"
 
-        result[url]["매장가"] = parsed_data["market_price"]
+        result[url]["매장가"] = parsed_data.get("market_price") or "AI분석결과없음"
 
         result[url]["판매가1"] = ""
 
