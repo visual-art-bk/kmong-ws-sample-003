@@ -5,6 +5,7 @@ from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.styles import Alignment, Font
 
 from openpyxl.drawing.image import Image as OpenpyxlImage
+from modules.utils.Logger import Logger
 
 def read_urls(path="url.txt"):
     if not os.path.exists(path):
@@ -16,6 +17,10 @@ def read_urls(path="url.txt"):
 
 
 async def make_excel(final_result, timestamp):
+    logger = Logger(
+        log_file='logs/file/excel/exc.log',
+        name='make_excel'
+    ).get_logger()
         
     avail_brands = [
         "ASK YOURSELF",
@@ -217,14 +222,24 @@ async def make_excel(final_result, timestamp):
         "브로치",
         "기타 ACC",
     ]
+    try:
 
-    for index, data in enumerate(final_result):
-        if data["브랜드"] not in avail_brands:
-            final_result[index]["브랜드"] = ""
-        if data["2차"] not in avail_1st_categories:
-            final_result[index]["2차"] = ""
-        if data["3차"] not in avail_2nd_categories:
-            final_result[index]["3차"] = ""
+        for index, data in enumerate(final_result):
+            if data["브랜드"] not in avail_brands:
+                final_result[index]["브랜드"] = ""
+            if data["2차"] not in avail_1st_categories:
+                final_result[index]["2차"] = ""
+            if data["3차"] not in avail_2nd_categories:
+                final_result[index]["3차"] = ""
+
+    except Exception as e:
+        logger.exception(
+            f"엑셀 저장 중, 브랜드 값관련 오류! : {e}"
+            f"브랜드 값을 가진 데이터(딕셔너리): {data}"
+        )
+
+        print('디버그 대기')
+        
 
     df = pd.DataFrame(final_result)
 
