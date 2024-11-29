@@ -25,13 +25,13 @@ async def process_url(url, model):
         html_data = await fetch_page_source(folder_path=folder_name, url=url)
 
         if not html_data:
-            scrapping_result[url] = {"결과": "실패"}
+            # scrapping_result[url] = {"결과": "실패"}
             return scrapping_result
 
         img_urls = await parse_images(html_data=html_data, url=url)
 
         if len(img_urls) == 0:
-            scrapping_result[url] = {"결과": "실패"}
+            # scrapping_result[url] = {"결과": "실패"}
             return scrapping_result
 
         ai_parsed_data = await ai_parse(ai_model=model, html_data=html_data)
